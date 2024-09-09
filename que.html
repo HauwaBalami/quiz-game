@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .quiz-container {
+            border: 1px solid black;
+            padding: 20px;
+            width: 400px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .question {
+            margin-bottom: 20px;
+        }
+
+        .options input {
+            margin-right: 10px;
+        }
+
+        .submit-btn {
+            margin-top: 20px;
+            padding: 5px 10px;
+            border: 1px solid black;
+        }
+
+        .result-container {
+            display: none;
+        }
+
+        #winners-list {
+            display: none;
+        }
+    </style>
+
+</head>
+
+<body class="bg-gray-100 h-screen flex items-center justify-center bg-gradient-to-b from-blue-500 via-white to-yellow-500">
+
+    <div class="container flex flex-col justify-center">
+        <!-- Quiz Container -->
+        <div class="quiz-container bg-gray-500 text-white">
+
+            <!-- Header: Participant Info and Timer -->
+            <div class="flex justify-between mb-4">
+                <div id="school-name"></div>
+                <div id="student-name"></div>
+                <div>Elapsed Time: <span id="timer">2:00</span></div>
+            </div>
+
+            <!-- Question Form -->
+            <form id="quizForm" onsubmit="nextQuestion(); return false;">
+                <div class="question" id="question-text"></div>
+                <div id="options" class="options"></div>
+                <button type="submit" class="submit-btn bg-blue-300">Submit</button>
+            </form>
+
+            <!-- Result Container -->
+            <div id="result" class="result-container"></div>
+
+            <!-- Winning school message -->
+            <div id="winning-message" style="display: none; margin-top: 20px;"></div>
+
+        </div>
+
+        <!-- Button to show/hide previous winners -->
+        <button onclick="toggleWinners()" class="mt-4 border-blue-300">Previous Winners</button>
+
+        <!-- Previous Winners List -->
+        <div id="winners-list">
+            <h2>Previous Winners</h2>
+            <ul id="winnerUl"></ul>
+        </div>
+
+    </div>
+
+    <script>
+        let timeLeft = 120; // 2 minutes = 120 seconds
+        let questionIndex = 0;
+        let correctAnswers = 0;
+        const totalQuestions = 10;
+        let interval;
+        let startTime;
+
+        const questions = [
+            { question: "What is the name of the tallest mountain in the world?", options: ["Kilimanjaro", "Ararat", "Everest", "Mount Olive"], answer: "Everest" },
+            { question: "Which planet is closest to the Sun?", options: ["Earth", "Venus", "Mercury", "Mars"], answer: "Mercury" },
+            { question: "What is the capital of France?", options: ["Paris", "Berlin", "Rome", "Madrid"], answer: "Paris" },
+            { question: "Who wrote 'Hamlet'?", options: ["William Shakespeare", "Charles Dickens", "J.K. Rowling", "George Orwell"], answer: "William Shakespeare" },
+            { question: "Which element has the chemical symbol 'O'?", options: ["Oxygen", "Osmium", "Gold", "Oganesson"], answer: "Oxygen" },
+            { question: "In what year did World War II end?", options: ["1941", "1945", "1939", "1918"], answer: "1945" },
+            { question: "What is the currency of Japan?", options: ["Yen", "Won", "Dollar", "Euro"], answer: "Yen" },
+            { question: "Which continent is the Sahara Desert located in?", options: ["Asia", "Australia", "Africa", "South America"], answer: "Africa" },
+            { question: "What is the square root of 64?", options: ["8", "6", "7", "9"], answer: "8" },
+            { question: "Who painted the Mona Lisa?", options: ["Leonardo da Vinci", "Michelangelo", "Pablo Picasso", "Vincent van Gogh"], answer: "Leonardo da Vinci" }
+        ];
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function startTimer() {
+            const timerElement = document.getElementById("timer");
+            interval = setInterval(function () {
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    timerElement.innerHTML = "Time's Up!";
+                    endQuiz();
+                } else {
+                    let minutes = Math.floor(timeLeft / 60);
+                    let seconds = timeLeft % 60;
+                    timerElement.innerHTML = `${minutes} : ${seconds < 10 ? '0' : ''}${seconds}`;
+                }
+                timeLeft--;
+            }, 1000);
+        }
+
+        function endQuiz() {
+            clearInterval(interval);
+            const percentage = (correctAnswers / totalQuestions) * 100;
+            const finishTime = new Date().getTime();
+
+            const schoolName = document.getElementById('school-name').innerText;
+            const studentName = document.getElementById('student-name').innerText;
+
+            storeWinner(schoolName, studentName, percentage, finishTime);
+
+            const resultContainer = document.getElementById("result");
+            resultContainer.innerHTML = `You answered ${correctAnswers} out of ${totalQuestions} questions correctly.<br>Your score: ${percentage.toFixed(2)}%`;
+            resultContainer.style.display = "block";
+
+            checkWinner();
+        }
+
+        function storeWinner(school, student, percentage, finishTime) {
+            const winners = JSON.parse(localStorage.getItem('winners')) || [];
+            winners.push({ school, student, percentage, finishTime });
+            localStorage.setItem('winners', JSON.stringify(winners));
+        }
+
+        function toggleWinners() {
+            const winnersList = document.getElementById('winners-list');
+            winnersList.style.display = winnersList.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function displayWinners() {
+            const winners = JSON.parse(localStorage.getItem('winners')) || [];
+            const winnerUl = document.getElementById('winnerUl');
+            winnerUl.innerHTML = '';
+
+            const topWinners = winners.filter(winner => winner.percentage >= 70);
+
+            topWinners.forEach(winner => {
+                const li = document.createElement('li');
+                li.innerText = `${winner.school}, ${winner.student}, ${winner.percentage}%`;
+                winnerUl.appendChild(li);
+            });
+        }
+
+        function checkWinner() {
+            const winners = JSON.parse(localStorage.getItem('winners')) || [];
+            if (winners.length === 0) return;
+
+            winners.sort((a, b) => b.percentage - a.percentage || a.finishTime - b.finishTime);
+
+            const bestWinner = winners[0];
+
+            const winningMessage = document.getElementById('winning-message');
+            winningMessage.style.display = 'block';
+            winningMessage.innerHTML = `Congratulations to ${bestWinner.school}! They achieved the highest score of ${bestWinner.percentage}% and completed the quiz in the shortest time.`;
+        }
+
+        window.onload = function () {
+            const userData = JSON.parse(localStorage.getItem('userData'));
+            if (userData) {
+                document.getElementById('school-name').innerText = userData.school;
+                document.getElementById('student-name').innerText = userData.student;
+            } else {
+                alert('No user data found. Please log in again.');
+                window.location.href = 'index3.html';
+            }
+
+            startTimer();
+            loadQuestion();
+        };
+
+        function loadQuestion() {
+            if (questionIndex >= totalQuestions) {
+                endQuiz();
+                return;
+            }
+
+            const questionObj = questions[questionIndex];
+            document.getElementById("question-text").innerHTML = questionObj.question;
+
+            const optionsContainer = document.getElementById("options");
+            optionsContainer.innerHTML = "";
+
+            questionObj.options.forEach((option) => {
+                const optionLabel = document.createElement("label");
+                const optionRadio = document.createElement("input");
+                optionRadio.type = "radio";
+                optionRadio.name = "answer";
+                optionRadio.value = option;
+
+                optionLabel.appendChild(optionRadio);
+                optionLabel.appendChild(document.createTextNode(option));
+
+                optionsContainer.appendChild(optionLabel);
+            });
+        }
+
+        function nextQuestion() {
+            const selectedAnswer = document.querySelector('input[name="answer"]:checked');
+            if (selectedAnswer) {
+                const currentQuestion = questions[questionIndex];
+                if (selectedAnswer.value === currentQuestion.answer) {
+                    correctAnswers++;
+                }
+                questionIndex++;
+                loadQuestion();
+            } else {
+                alert("Please select an answer before proceeding.");
+            }
+        }
+
+        displayWinners();
+    </script>
+
+</body>
+
+</html>
